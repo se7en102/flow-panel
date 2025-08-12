@@ -1,0 +1,200 @@
+---
+
+#------------------------------------------------------------------------------
+# YAML Aliases to simplify maintenance
+
+anchorLinks:
+  - link: &grafana-home
+      url: "https://grafana.com/"
+      params: "time"
+
+#------------------------------------------------------------------------------
+# Panel Config
+
+cellIdPreamble: "cell-"
+cells: 
+  drawio:
+    link:
+      url: "https://app.diagrams.net/?p=svgdata"
+  inbox_depth:
+    dataRef: "inbox_depth"
+    label:
+      separator: "cr"
+      units: "none"
+      decimalPoints: 0
+    labelColor:
+      gradientMode: "hue"
+      thresholds:
+        - {color: "green", level: 0}
+        - {color: "orange", level: 500}
+        - {color: "red", level: 1000}
+    link: *grafana-home
+  db_transactions:
+    dataRef: "db_transactions"
+    label:
+      separator: "cr"
+      units: "ops"
+      decimalPoints: 0
+    fillColor:
+      gradientMode: "hue"
+      thresholds:
+        - {color: "semi-dark-green", level: 0}
+        - {color: "orange", level: 400}
+        - {color: "red-yellow-orange-black-white", level: 800}
+    fillLevel:
+      # Optional attribute level override for the associated time-series.
+      #dataRef: "test-data-large-cos"
+
+      # Version 1.16.0 onwards: Optional alternative data source for the cell taken from the bespoke drive
+      # scope. When set it's used in preference to the dataRef value.
+      bespokeDataRef: null
+    
+      # Optional attribute level override. Requires corresponding attribute level dataRef override.
+      datapoint: "last"
+
+      # The optional data value at or below which the fillLevel will be set to 0%.
+      thresholdOffValue: 0
+
+      # These terms define the conversion from incoming data values to percent-fill.
+      thresholdLwrValue: 0
+      thresholdLwrFillPercent: 0
+      thresholdUprValue: 900
+      thresholdUprFillPercent: 100
+
+      # This term defines how fill is rendered. Allowed values are 'bottomToTop', 'topToBottom',
+      # 'leftToRight', 'rightToLeft'. The default is 'bottomToTop'.
+      fillDirection: 'bottomToTop'
+
+    # Version 1.11.0 onwards: draw.io has a selectable line property called 'Flow Animation'.
+    # When selected the line animates in a particular direction at a particular rate to
+    # visualize flow. This section provides control for these animations. Note that the SVG
+    # must be exported (not just saved as svg) from draw.io for these animations to work.
+    # The yaml assumes directionality based on data 'sign' but that can be overriden by
+    # marking it as unidirectional. The animation duration is defined with three bounds
+    # of off, lower and upper.
+    #
+    # Whenever animations are present in this yaml data, a control is visible in the bottom
+    # left corner. The panel options also allows the initial state to be selectable
+    flowAnimation:
+      # Optional attribute level override for the associated time-series.
+      #dataRef: "test-data-large-cos"
+
+      # Version 1.16.0 onwards: Optional alternative data source for the cell taken from the bespoke drive
+      # scope. When set it's used in preference to the dataRef value.
+      #bespokeDataRef: null
+    
+      # Optional attribute level override. Requires corresponding attribute level dataRef override.
+      #datapoint: "last"
+
+      # The optional absolute data value at or below which the animation will be stopped.
+      thresholdOffValue: 0
+
+      # These terms define the conversion from incoming data values to animation durations. The longer
+      # the duration, the slower the animation.
+      thresholdLwrValue: 100
+      thresholdLwrDurationSecs: 1
+      thresholdUprValue: 600
+      thresholdUprDurationSecs: 0.1
+
+      # Version 1.16.4 onwards: The optional biasPower applies a curve to how the animation speed ramps in.
+      # The algorithm determines a normalised (0-1) value from the threshold value terms and then raises it
+      # to this power. The power defaults to 1 which results in a linear ramp. Set it below 1 (and above 0)
+      # and the speed ramps in more quickly. Set it above 1 and it will ramp in more slowly.
+      biasPower: 1.0
+
+      # Animation speeds (above) are calculated based off of the absolute data value. The direction
+      # of the animation is determined off the sign of the data, unless this flag is true.
+      unidirectional: true
+
+    # Version 1.16.0 onwards: The bespoke section allows you to drive 'HTML element attribute values'
+    # directly via your own 'mathjs' formulas. When you tag a 'cell' in your SVG you are actually tagging
+    # an 'HTML element tree' containing all sorts of types such as 'g', 'div', 'rect', etc. By driving the
+    # attributes directly on these individual elements you can manage truly bespoke widgets on your panel.
+    # Elements in a cell are highly coupled and all that complexity normally gets managed by the SVG editor.
+    # It's important when overriding these attribute values that the change is applied in a coherent way.
+    # i.e. Rather than change the 'width' and 'height' attributes on a 'rect', instead change the
+    # 'transform->scale' and 'transform-origin' on the root element of the cell. Doing this ensures everything
+    # remains coherent with respect to features like the fill level drive and the cell label positioning.
+    #
+    # As well as driving element attributes, the values calculated in the 'mathjs' formulas can also be used as
+    # the source data value for the other drives such as label, labelColor, strokeColor, etc. Via this pathway,
+    # all drives can be driven from a client-defined mix of incoming data sources.
+    #
+    # The bespoke drive can be thought of as the following layered process:
+    # - Define a namespace, a collection of cell-ids that will share bespoke values. Then in the namespace:
+    # - Define a set of constants.
+    # - Extract element attribute values into that set of constants.
+    # - Run a set of formulas using the above constants, grafana variables and incoming dataRefs.
+    # - Drive a set of element attributes using the above formula results.
+    # - Source other drives (label, labelColor, etc.) from the bespoke values calculated in the formulas.
+    #
+    # All formulas are presented with a state object that contains:
+    # - The constants you've defined and extracted.
+    # - A 'utils' Framework object containing functions:
+    #   - log = function(...) -> void. Forwards through to console.info. For developing and debug use.
+    #   - variablesReplace = function(string) -> string. Grafana variables defined in the string in the normal
+    #     '${myVar}' way are replaced in the result with the actual grafana variable values.
+    #   - highlighterSelection = string. Name of the tag selected. Empty string if nothing selected. ( Version 1.17.5 onwards)
+    #   - highlighterState = string. Cells highlighter state. Values are 'Ambient', 'Lowlight', 'Highlight'. This is
+    #     only available for use within drives.attribsSet mathjs formulas. (Version 1.17.5 onwards)
+    # - data : Object containing an item for every dataRef defined in the namespace.
+    #
+    # The best way to understand this drive is to explore it via a provisioning/dashboardData example such as the
+    # bespokeDrive.svg/bespokeDrive.yaml example. Start with this working example, add utils.log(data) in a formula
+    # to see the incoming dataRef values you have in the console, then iterate slowly towards your goal.
+    # See https://mathjs.org/examples/index.html for mathjs formula usage.
+    
+    link: *grafana-home
+  start_rate:
+    dataRef: "start_rate"
+    label:
+      separator: "colon"
+      units: "pps"
+      decimalPoints: 0
+    labelColor:
+      gradientMode: "hue"
+      thresholds:
+        - {color: "green", level: 0}
+        - {color: "orange", level: 100}
+    link: *grafana-home
+  active_workers:
+    dataRef: "active_workers"
+    label:
+      separator: "cr"
+      units: "none"
+      decimalPoints: 0
+    labelColor:
+      gradientMode: "hue"
+      thresholds:
+        - {color: "#888888", level: 0}
+        - {color: "light-blue", level: 100}
+    flowAnimation:
+      # Optional attribute level override for the associated time-series.
+      #dataRef: "test-data-large-cos"
+
+      # Version 1.16.0 onwards: Optional alternative data source for the cell taken from the bespoke drive
+      # scope. When set it's used in preference to the dataRef value.
+      #bespokeDataRef: null
+    
+      # Optional attribute level override. Requires corresponding attribute level dataRef override.
+      #datapoint: "last"
+
+      # The optional absolute data value at or below which the animation will be stopped.
+      thresholdOffValue: 0
+
+      # These terms define the conversion from incoming data values to animation durations. The longer
+      # the duration, the slower the animation.
+      thresholdLwrValue: 100
+      thresholdLwrDurationSecs: 1
+      thresholdUprValue: 600
+      thresholdUprDurationSecs: 0.1
+
+      # Version 1.16.4 onwards: The optional biasPower applies a curve to how the animation speed ramps in.
+      # The algorithm determines a normalised (0-1) value from the threshold value terms and then raises it
+      # to this power. The power defaults to 1 which results in a linear ramp. Set it below 1 (and above 0)
+      # and the speed ramps in more quickly. Set it above 1 and it will ramp in more slowly.
+      biasPower: 1.0
+
+      # Animation speeds (above) are calculated based off of the absolute data value. The direction
+      # of the animation is determined off the sign of the data, unless this flag is true.
+      unidirectional: true
